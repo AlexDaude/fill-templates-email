@@ -19,7 +19,7 @@ export default function TemplatesSection({ library, ready, selectedTemplate, set
           <textarea id="templateEditor" value={library.templates[selectedTemplate][language][genre]} onChange={e => editVariant(e.target.value)} disabled={!ready} spellCheck="true" aria-label="Template message text"></textarea>
           <p className="format-help">Formatting: <code>**bold text**</code> · <code>[link text](https://example.com)</code></p>
           <div className="editor-foot">
-            <span>Variables: <code>{'{{customer_name}}'}</code> <code>{'{{customer_email}}'}</code></span>
+            <span>Variables: <code>{'{{customer_name}}'}</code> <code>{'{{customer_email}}'}</code> <code>{'{{location}}'}</code></span>
             <button type="button" className="text-btn" id="resetTemplate" disabled={!ready} onClick={onReset}>Reset variant</button>
           </div>
         </section>

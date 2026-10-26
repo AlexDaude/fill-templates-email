@@ -6,6 +6,8 @@ const source = await readFile(new URL('../lib/textflow-core.js', import.meta.url
 const { parseCsv, validateLibrary, original, labels, formattedMessage, zipFiles, safeSegment, isValid } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const rows = parseCsv('\ufeffcustomer_email;customer_name;language;genre\r\na@example.com;"Doe; Ana";ES;singular');
 assert.equal(rows[0].customer_name, 'Doe; Ana');
+assert.equal(rows[0].location, '');
+assert.equal(parseCsv('customer_email,customer_name,language,genre,location\na@example.com,Ana,en,singular, Madrid ')[0].location, 'Madrid');
 assert.equal(rows[0].language, 'es');
 assert.ok(isValid(rows[0]));
 assert.ok(!isValid({ ...rows[0], language: 'xx' }));

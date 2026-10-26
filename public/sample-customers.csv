@@ -1,5 +1,5 @@
-customer_email,customer_name,language,genre
-maria@example.com,María García,es,singular
-hola@atlas.example,Equip Atlas,ca,plural
-james@example.com,James Wilson,en,singular
-team@palmer.example,The Palmer Group,en,plural
+customer_email,customer_name,language,genre,location
+maria@example.com,María García,es,singular,Madrid
+hola@atlas.example,Equip Atlas,ca,plural,Barcelona
+james@example.com,James Wilson,en,singular,London
+team@palmer.example,The Palmer Group,en,plural,New York

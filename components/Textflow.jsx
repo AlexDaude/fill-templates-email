@@ -55,7 +55,7 @@ export default function Textflow() {
     }
     function editVariant(value) { const next = structuredClone(library); next.templates[selectedTemplate][language][genre] = value; persist(next); }
     const valid = people.filter(isValid), invalid = people.length - valid.length, person = valid[currentIndex];
-    const interpolate = p => (library.templates[selectedTemplate][p.language][p.genre] || "").replace(/{{\s*(customer_name|customer_email|language|genre)\s*}}/g, (_, key) => p[key]);
+    const interpolate = p => (library.templates[selectedTemplate][p.language][p.genre] || "").replace(/{{\s*(customer_name|customer_email|language|genre|location)\s*}}/g, (_, key) => p[key]);
     const isSent = p => Boolean(sentMessages[selectedTemplate]?.includes(people.indexOf(p)));
     function toggleSent() {
         if (!person) return;

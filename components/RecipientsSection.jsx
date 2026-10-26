@@ -31,12 +31,12 @@ export default function RecipientsSection({ people, invalid, fileLabel, demo, lo
           <details className="format-details">
             <summary>CSV format &amp; required columns</summary>
             <p><a href="/sample-customers.csv" download>Download an example CSV</a></p>
-            <p>Headers: <code>customer_email</code>, <code>customer_name</code>, <code>language</code>, <code>genre</code>. Languages: <strong>en / es / ca</strong>. Genre: <strong>singular / plural</strong>. Comma and semicolon delimiters are supported.</p>
+            <p>Headers: <code>customer_email</code>, <code>customer_name</code>, <code>language</code>, <code>genre</code>, <code>location</code> (optional). Languages: <strong>en / es / ca</strong>. Genre: <strong>singular / plural</strong>. Comma and semicolon delimiters are supported.</p>
           </details>
           <div className="subsection">
             <div className="subsection-head"><strong>Customer list</strong><span className="count" id="rowCount">{`${people.length} ${demo ? "demo " : ""}rows`}</span></div>
             <div className="table-wrap">
-              <table><thead><tr><th>Name</th><th>Email</th><th>Lang.</th><th>Genre</th><th>Status</th></tr></thead><tbody id="customerRows">{people.map((p, i) => <tr key={i} className={isSent(p) ? "sent-row" : ""}><td className="row-name">{p.customer_name || "?"}</td><td>{p.customer_email || "?"}</td><td><span className="tag">{p.language.toUpperCase()}</span></td><td>{p.genre}</td><td>{isSent(p) ? "Sent" : "Not sent"}</td></tr>)}</tbody></table>
+              <table><thead><tr><th>Name</th><th>Email</th><th>Lang.</th><th>Genre</th><th>Location</th><th>Status</th></tr></thead><tbody id="customerRows">{people.map((p, i) => <tr key={i} className={isSent(p) ? "sent-row" : ""}><td className="row-name">{p.customer_name || "?"}</td><td>{p.customer_email || "?"}</td><td><span className="tag">{p.language.toUpperCase()}</span></td><td>{p.genre}</td><td>{p.location || "—"}</td><td>{isSent(p) ? "Sent" : "Not sent"}</td></tr>)}</tbody></table>
             </div>
             <div className={"warning" + (invalid ? " show" : "")} id="csvWarning" role="alert">{invalid ? `${invalid} invalid rows will be skipped. Check required fields, email, language (en/es/ca), and genre (singular/plural).` : ""}</div>
           </div>
