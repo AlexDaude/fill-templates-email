@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-export default function RecipientsSection({ people, invalid, fileLabel, demo, loadFile }) {
+export default function RecipientsSection({ people, invalid, fileLabel, demo, loadFile, isSent }) {
   const csvInput = useRef(null);
   const [dragging, setDragging] = useState(false);
   return (
@@ -36,7 +36,7 @@ export default function RecipientsSection({ people, invalid, fileLabel, demo, lo
           <div className="subsection">
             <div className="subsection-head"><strong>Customer list</strong><span className="count" id="rowCount">{`${people.length} ${demo ? "demo " : ""}rows`}</span></div>
             <div className="table-wrap">
-              <table><thead><tr><th>Name</th><th>Email</th><th>Lang.</th><th>Genre</th></tr></thead><tbody id="customerRows">{people.map((p, i) => <tr key={i}><td className="row-name">{p.customer_name || "?"}</td><td>{p.customer_email || "?"}</td><td><span className="tag">{p.language.toUpperCase()}</span></td><td>{p.genre}</td></tr>)}</tbody></table>
+              <table><thead><tr><th>Name</th><th>Email</th><th>Lang.</th><th>Genre</th><th>Status</th></tr></thead><tbody id="customerRows">{people.map((p, i) => <tr key={i} className={isSent(p) ? "sent-row" : ""}><td className="row-name">{p.customer_name || "?"}</td><td>{p.customer_email || "?"}</td><td><span className="tag">{p.language.toUpperCase()}</span></td><td>{p.genre}</td><td>{isSent(p) ? "Sent" : "Not sent"}</td></tr>)}</tbody></table>
             </div>
             <div className={"warning" + (invalid ? " show" : "")} id="csvWarning" role="alert">{invalid ? `${invalid} invalid rows will be skipped. Check required fields, email, language (en/es/ca), and genre (singular/plural).` : ""}</div>
           </div>

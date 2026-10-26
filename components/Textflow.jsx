@@ -19,6 +19,7 @@ export default function Textflow() {
     const [language, setLanguage] = useState("en"), [genre, setGenre] = useState("singular");
     const [currentIndex, setCurrentIndex] = useState(0), [demo, setDemo] = useState(true);
     const [fileLabel, setFileLabel] = useState("sample_customers.csv"), [exportHtml, setExportHtml] = useState(true);
+    const [sentMessages, setSentMessages] = useState({});
     const [toast, setToast] = useState("");
     const preview = useRef(null), toastTimer = useRef(null);
     function showToast(message) { setToast(message); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(""), 4200); }
@@ -55,6 +56,15 @@ export default function Textflow() {
     function editVariant(value) { const next = structuredClone(library); next.templates[selectedTemplate][language][genre] = value; persist(next); }
     const valid = people.filter(isValid), invalid = people.length - valid.length, person = valid[currentIndex];
     const interpolate = p => (library.templates[selectedTemplate][p.language][p.genre] || "").replace(/{{\s*(customer_name|customer_email|language|genre)\s*}}/g, (_, key) => p[key]);
+    const isSent = p => Boolean(sentMessages[selectedTemplate]?.includes(people.indexOf(p)));
+    function toggleSent() {
+        if (!person) return;
+        const index = people.indexOf(person);
+        setSentMessages(previous => {
+            const sent = previous[selectedTemplate] || [];
+            return { ...previous, [selectedTemplate]: sent.includes(index) ? sent.filter(i => i !== index) : [...sent, index] };
+        });
+    }
     const message = person ? interpolate(person) : "";
     async function loadFile(file) {
         if (!file)
@@ -66,6 +76,7 @@ export default function Textflow() {
         try {
             const rows = parseCsv(await file.text());
             setPeople(rows);
+            setSentMessages({});
             setDemo(false);
             setFileLabel(file.name);
             setCurrentIndex(0);
@@ -99,7 +110,7 @@ export default function Textflow() {
             showToast("Restore failed: " + error.message);
         }
     }
-    function exportFiles() { const used = new Map(); return valid.map(p => { const folder = safeSegment(p.customer_email), key = folder.toLowerCase(), count = (used.get(key) || 0) + 1; used.set(key, count); const text = interpolate(p); return { name: folder + "/" + selectedTemplate + (count > 1 ? "_" + count : "") + (exportHtml ? ".html" : ".txt"), content: exportHtml ? '<!doctype html><html><head><meta charset="utf-8"><title>Customer message</title></head><body>' + gmailHtml(text) + "</body></html>" : text }; }); }
+    function exportFiles() { const used = new Map(); return valid.map(p => { const folder = safeSegment(p.customer_email), key = folder.toLowerCase(), count = (used.get(key) || 0) + 1; used.set(key, count); const text = interpolate(p); return { name: (isSent(p) ? "sent/" : "no sent/") + folder + "/" + selectedTemplate + (count > 1 ? "_" + count : "") + (exportHtml ? ".html" : ".txt"), content: exportHtml ? '<!doctype html><html><head><meta charset="utf-8"><title>Customer message</title></head><body>' + gmailHtml(text) + "</body></html>" : text }; }); }
     function download(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000); }
     function canExport() { if (!valid.length)
         return false; if (valid.some(p => !interpolate(p).trim())) {
@@ -107,10 +118,10 @@ export default function Textflow() {
         return false;
     } return true; }
     function downloadZip() { if (!canExport())
-        return; const files = exportFiles(); if (files.length > 65535) {
+        return; const files = exportFiles(); if (files.length + 2 > 65535) {
         showToast("Too many files for a standard ZIP archive.");
         return;
-    } download(zipFiles(files), "customer_messages.zip"); showToast(`Generated ZIP containing ${files.length} personalized messages.`); }
+    } download(zipFiles([{ name: "sent/", content: "" }, { name: "no sent/", content: "" }, ...files]), "customer_messages.zip"); showToast(`Generated ZIP containing ${files.length} personalized messages.`); }
     async function saveToFolder() {
         if (!window.showDirectoryPicker) {
             showToast("Folder saving is not supported here. Please use Download ZIP.");
@@ -122,8 +133,10 @@ export default function Textflow() {
             let handle = await window.showDirectoryPicker({ mode: "readwrite" });
             const files = exportFiles();
             handle = await handle.getDirectoryHandle("textflow-" + new Date().toISOString().replace(/[:.]/g, "-") + "-" + crypto.randomUUID().slice(0, 8), { create: true });
+            await handle.getDirectoryHandle("sent", { create: true });
+            await handle.getDirectoryHandle("no sent", { create: true });
             for (const file of files) {
-                const [folder, name] = file.name.split("/"), customer = await handle.getDirectoryHandle(folder, { create: true }), item = await customer.getFileHandle(name, { create: true }), stream = await item.createWritable();
+                const [status, folder, name] = file.name.split("/"), group = await handle.getDirectoryHandle(status, { create: true }), customer = await group.getDirectoryHandle(folder, { create: true }), item = await customer.getFileHandle(name, { create: true }), stream = await item.createWritable();
                 await stream.write(file.content);
                 await stream.close();
             }
@@ -157,7 +170,7 @@ export default function Textflow() {
           <PageIntro />
           <div className="columns">
             <div className="left-stack">
-              <RecipientsSection people={people} invalid={invalid} fileLabel={fileLabel} demo={demo} loadFile={loadFile} />
+              <RecipientsSection isSent={isSent} people={people} invalid={invalid} fileLabel={fileLabel} demo={demo} loadFile={loadFile} />
               <TemplatesSection
                 library={library} ready={ready} selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate}
                 language={language} setLanguage={setLanguage} genre={genre} setGenre={setGenre}
@@ -166,7 +179,7 @@ export default function Textflow() {
                 onReset={() => editVariant(original[selectedTemplate]?.[language]?.[genre] ?? "Hello {{customer_name}},\n\n")}
               />
             </div>
-            <PreviewSection person={person} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} count={valid.length} message={message} previewRef={preview} copy={copy}>
+            <PreviewSection sent={person ? isSent(person) : false} toggleSent={toggleSent} person={person} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} count={valid.length} message={message} previewRef={preview} copy={copy}>
               <ExportSection count={valid.length} invalid={invalid} exportHtml={exportHtml} setExportHtml={setExportHtml} saveToFolder={saveToFolder} downloadZip={downloadZip} />
             </PreviewSection>
           </div>

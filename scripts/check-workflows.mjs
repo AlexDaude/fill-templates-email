@@ -28,3 +28,17 @@ assert.ok(bytes.includes(Buffer.from('ana@example.com/update.txt')));
 assert.ok(bytes.includes(Buffer.from('Hello Ana')));
 assert.equal(bytes.readUInt32LE(bytes.length-22), 0x06054b50);
 console.log('Passed: CSV parsing and validation, backup compatibility, safe formatting, filenames, ZIP structure and content.');
+
+const groupedZip = Buffer.from(await zipFiles([
+    { name: 'sent/', content: '' },
+    { name: 'no sent/', content: '' },
+    { name: 'sent/ana@example.com/update.txt', content: 'Sent message' },
+    { name: 'no sent/bob@example.com/update.txt', content: 'Pending message' },
+]).arrayBuffer());
+assert.equal(groupedZip.readUInt16LE(groupedZip.length - 12), 4);
+for (const path of ['sent/', 'no sent/', 'sent/ana@example.com/update.txt', 'no sent/bob@example.com/update.txt']) {
+    assert.ok(groupedZip.includes(Buffer.from(path)));
+}
+const firstDirectory = groupedZip.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+assert.equal(groupedZip.readUInt32LE(firstDirectory + 38), 0x10);
+console.log('Passed: sent and no sent ZIP folders, grouped messages, directory attributes.');

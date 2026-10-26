@@ -3,7 +3,7 @@ export default function ExportSection({ count, invalid, exportHtml, setExportHtm
 
   return (
         <div className="export" aria-labelledby="export-title">
-          <div className="export-head"><div><h3 id="export-title">Export messages</h3><p>customer_email/template.txt · one folder per customer</p></div><div className="export-count" id="exportCount">{`${count} files`}</div></div>
+          <div className="export-head"><div><h3 id="export-title">Export messages</h3><p>sent/ or no sent/ - one folder per customer</p></div><div className="export-count" id="exportCount">{`${count} files`}</div></div>
           <div className="export-status" id="exportDescription">{invalid ? `${count} valid ? ${invalid} invalid, skipped` : "Ready for generation"}</div>
           <label className="html-export"><input type="checkbox" id="exportHtml" checked={exportHtml} onChange={e => setExportHtml(e.target.checked)}/> Export formatted HTML instead of TXT</label>
           <div className="actions">
