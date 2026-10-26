@@ -55,6 +55,11 @@
   const validPeople = () => people.filter(isValid);
   const getVariant = () => templates[selectedTemplate][$('langSelect').value][$('genreSelect').value];
   const interpolate = (p) => (templates[selectedTemplate][p.language][p.genre] || '').replace(/{{\s*(customer_name|customer_email|language|genre)\s*}}/g,(_,key)=>p[key]);
+  // Escape all input before adding the small set of supported formatting tags.
+  function formattedMessage(text){
+    return safeText(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,(_,label,url)=>`<a href="${url}" style="color:#1155cc;text-decoration:underline" target="_blank" rel="noopener noreferrer">${label}</a>`).replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/\r\n|\r|\n/g,'<br>');
+  }
+  const gmailHtml = text => `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#202124">${formattedMessage(text)}</div>`;
   function showToast(message){$('toastText').textContent=message;$('toast').classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>$('toast').classList.remove('show'),4200);}
   function renderRows(){
     const sample = people;
@@ -75,9 +80,9 @@
   function renderPreview(){
     const valid=validPeople(), p=valid[currentIndex];
     $('prevPerson').disabled=currentIndex===0;$('nextPerson').disabled=currentIndex>=valid.length-1;
-    if(!p){$('messagePreview').textContent='Upload a CSV with valid customers to preview the personalized message.';$('messagePreview').classList.add('empty');$('recipientName').textContent='No recipient selected';$('recipientEmail').textContent='';$('recipientAvatar').textContent='—';$('recipientLanguage').textContent='—';$('recipientGenre').textContent='—';$('previewPosition').textContent='No recipients';$('copyMessage').disabled=true;return;}
-    $('messagePreview').textContent=interpolate(p);$('messagePreview').classList.remove('empty');
-    $('recipientName').textContent=p.customer_name;$('recipientEmail').textContent=p.customer_email;$('recipientAvatar').textContent=p.customer_name.split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase();$('recipientLanguage').textContent=langLabel(p.language);$('recipientGenre').textContent=p.genre;$('previewPosition').textContent=`Recipient ${currentIndex+1} of ${valid.length}`;$('copyMessage').disabled=false;
+    if(!p){$('messagePreview').textContent='Upload a CSV with valid customers to preview the personalized message.';$('messagePreview').classList.add('empty');$('recipientName').textContent='No recipient selected';$('recipientEmail').textContent='';$('recipientAvatar').textContent='—';$('recipientLanguage').textContent='—';$('recipientGenre').textContent='—';$('previewPosition').textContent='No recipients';$('copyMessage').disabled=true;$('copyGmail').disabled=true;return;}
+    $('messagePreview').innerHTML=formattedMessage(interpolate(p));$('messagePreview').classList.remove('empty');
+    $('recipientName').textContent=p.customer_name;$('recipientEmail').textContent=p.customer_email;$('recipientAvatar').textContent=p.customer_name.split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase();$('recipientLanguage').textContent=langLabel(p.language);$('recipientGenre').textContent=p.genre;$('previewPosition').textContent=`Recipient ${currentIndex+1} of ${valid.length}`;$('copyMessage').disabled=false;$('copyGmail').disabled=false;
     
   }
   function setTemplate(template){selectedTemplate=template;document.querySelectorAll('[data-template]').forEach(el=>{let active=el.dataset.template===template;el.classList.toggle('selected',active);el.setAttribute('aria-pressed',String(active));});renderPreview();changeVariant();}
@@ -119,11 +124,11 @@
   const safeSegment = value => value.normalize('NFC').replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').slice(0,120) || 'customer';
   function exportFiles(){
     const used=new Map();
-    return validPeople().map(p=>{const folder=safeSegment(p.customer_email), key=folder.toLowerCase();const count=(used.get(key)||0)+1;used.set(key,count);return {name:folder+'/'+selectedTemplate+(count>1?'_'+count:'')+'.txt',content:interpolate(p)};});
+    return validPeople().map(p=>{const folder=safeSegment(p.customer_email), key=folder.toLowerCase();const count=(used.get(key)||0)+1;used.set(key,count);const text=interpolate(p), html=$('exportHtml').checked;return {name:folder+'/'+selectedTemplate+(count>1?'_'+count:'')+(html?'.html':'.txt'),content:html?'<!doctype html><html><head><meta charset="utf-8"><title>Customer message</title></head><body>'+gmailHtml(text)+'</body></html>':text};});
   }
   async function saveToFolder(){
     if(!window.showDirectoryPicker){showToast('Folder saving is not supported here. Please use Download ZIP.');return;}
-    if(exportFiles().some(f=>!f.content.trim())){showToast('Fill in each required template variant before exporting.');return;}
+    if(validPeople().some(p=>!interpolate(p).trim())){showToast('Fill in each required template variant before exporting.');return;}
     let handle;
     try {handle=await window.showDirectoryPicker({mode:'readwrite'});}catch(e){if(e.name!=='AbortError')showToast('Could not open folder: '+e.message);return;}
     const files=exportFiles();
@@ -151,7 +156,7 @@
     return new Blob([...blocks,...central,end.buf],{type:'application/zip'});
   }
   function downloadZip(){
-    const files=exportFiles();if(!files.length)return;if(files.some(f=>!f.content.trim())){showToast('Fill in each required template variant before exporting.');return;}
+    const files=exportFiles();if(!files.length)return;if(validPeople().some(p=>!interpolate(p).trim())){showToast('Fill in each required template variant before exporting.');return;}
     if(files.length>65535){showToast('Too many files for a standard ZIP archive.');return;}
     const blob=zipFiles(files),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='customer_messages.zip';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);showToast(`Generated ZIP containing ${files.length} personalized text files.`);
   }
@@ -164,11 +169,16 @@
   $('dropzone').addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
   document.querySelectorAll('[data-template]').forEach(b=>b.addEventListener('click',()=>setTemplate(b.dataset.template)));
   $('langSelect').addEventListener('change',changeVariant);$('genreSelect').addEventListener('change',changeVariant);
-  $('templateEditor').addEventListener('input',e=>{templates[selectedTemplate][$('langSelect').value][$('genreSelect').value]=e.target.value;persist();const p=validPeople()[currentIndex];if(p && p.language===$('langSelect').value && p.genre===$('genreSelect').value)$('messagePreview').textContent=interpolate(p);});
+  $('templateEditor').addEventListener('input',e=>{templates[selectedTemplate][$('langSelect').value][$('genreSelect').value]=e.target.value;persist();const p=validPeople()[currentIndex];if(p && p.language===$('langSelect').value && p.genre===$('genreSelect').value)$('messagePreview').innerHTML=formattedMessage(interpolate(p));});
   $('resetTemplate').addEventListener('click',()=>{templates[selectedTemplate][$('langSelect').value][$('genreSelect').value]=original[selectedTemplate]?.[$('langSelect').value]?.[$('genreSelect').value] ?? 'Hello {{customer_name}},\n\n';persist();changeVariant();renderPreview();showToast('Template variant restored.');});
   $('prevPerson').addEventListener('click',()=>{if(currentIndex>0){currentIndex--;renderPreview();}});
   $('nextPerson').addEventListener('click',()=>{if(currentIndex<validPeople().length-1){currentIndex++;renderPreview();}});
-  $('copyMessage').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('messagePreview').textContent);showToast('Message copied to clipboard.');}catch(e){showToast('Clipboard unavailable. Select and copy the preview manually.');}});
+  $('copyMessage').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('messagePreview').innerText);showToast('Message copied to clipboard.');}catch(e){showToast('Clipboard unavailable. Select and copy the preview manually.');}});
+  $('copyGmail').addEventListener('click',async()=>{
+    const person=validPeople()[currentIndex];if(!person)return;
+    if(!window.ClipboardItem || !navigator.clipboard?.write){showToast('Formatted clipboard unavailable. Select the preview and copy it, then paste into Gmail.');return;}
+    try{const text=interpolate(person);await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([gmailHtml(text)],{type:'text/html'}),'text/plain':new Blob([$('messagePreview').innerText],{type:'text/plain'})})]);showToast('Copied with formatting. Paste into Gmail with plain text mode turned off.');}catch{showToast('Clipboard access blocked. Select and copy the preview, then paste into Gmail.');}
+  });
   $('saveFolder').addEventListener('click',saveToFolder);$('downloadZip').addEventListener('click',downloadZip);
   $('newTemplate').addEventListener('click',()=>{const name=prompt('Template name');if(!name?.trim())return;if(Object.keys(templates).length>=100){showToast('Maximum of 100 templates reached.');return;}const id='custom-'+crypto.randomUUID();templates[id]=structuredClone(original.update);labels[id]=name.trim().slice(0,100);selectedTemplate=id;persist();renderChoices();changeVariant();renderPreview();});
   $('backupTemplates').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(libraryData(),null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='textflow-templates.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);});

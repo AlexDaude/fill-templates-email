@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const source = fs.readFileSync('public/textflow.js', 'utf8').replace('  if(storageWarning)', '  globalThis.testApi={parseCsv,exportFiles,zipFiles,validateLibrary,libraryData};\n  if(storageWarning)');
+const source = fs.readFileSync('public/textflow.js', 'utf8').replace('  if(storageWarning)', '  globalThis.testApi={parseCsv,exportFiles,zipFiles,validateLibrary,libraryData,formattedMessage};\n  if(storageWarning)');
 function boot(storage = new Map()) {
   const nodes = new Map();
   function node(id) { if (!nodes.has(id)) nodes.set(id, {value:id==='langSelect'?'en':id==='genreSelect'?'singular':'',dataset:{},listeners:{},classList:{add(){},remove(){},toggle(){}},addEventListener(event,fn){this.listeners[event]=fn;},setAttribute(){},replaceChildren(){},append(){}});return nodes.get(id); }
@@ -19,6 +19,13 @@ function boot(storage = new Map()) {
   assert.equal(boot(app.storage).node('templateEditor').value,'Hi {{customer_name}} — {{customer_email}}');
   const files=app.api.exportFiles();assert.equal(files[0].name,'maria@example.com/update.txt');
   assert.match(files[2].content,/Hi James Wilson/);
+  assert.match(app.api.formattedMessage('**Hello**\n[Visit](https://example.com)'), /<strong>Hello<\/strong><br><a href="https:\/\/example.com"/);
+  assert.ok(!app.api.formattedMessage('<img src=x onerror=alert(1)> [bad](javascript:alert)').includes('<img'));
+  assert.ok(!app.api.formattedMessage('[bad](javascript:alert)').includes('<a'));
+  app.node('exportHtml').checked=true;
+  assert.equal(app.api.exportFiles()[0].name,'maria@example.com/update.html');
+  assert.match(app.api.exportFiles()[0].content, /<!doctype html>/);
+  app.node('exportHtml').checked=false;
   const zip=app.api.zipFiles(files);const bytes=Buffer.from(await zip.arrayBuffer());
   assert.equal(bytes.readUInt32LE(0),0x04034b50);assert.ok(bytes.includes(Buffer.from('maria@example.com/update.txt')));
   assert.throws(()=>app.api.validateLibrary({version:1,templates:[{id:'__proto__',name:'bad'}]}));

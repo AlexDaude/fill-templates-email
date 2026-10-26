@@ -11,6 +11,7 @@ CSV headers: `customer_email,customer_name,language,genre`. Languages: `en`, `es
 Implementation: the lightweight app lives in `public/textflow.html`, `public/textflow.css`, and `public/textflow.js`. Next.js serves it at `/` using a rewrite, without remote services or additional runtime dependencies. Run `node scripts/check-workflows.cjs` for workflow checks and `npx tsc --noEmit` for TypeScript checks.
 
 Original scaffold notes follow.
+Templates support `**bold text**` and `[link text](https://example.com)`. The preview renders formatting safely. **Copy for Gmail** writes HTML and plain text to the clipboard; paste normally into a Gmail compose window with Plain text mode turned off. **Export formatted HTML instead of TXT** saves formatted `.html` messages using the existing customer folders, for both folder and ZIP exports. Browser clipboard permission is required; if unavailable, select and copy the rendered preview manually. Gmail paste behavior has not been tested against a signed-in Gmail session.
 
 ## Getting Started
 
