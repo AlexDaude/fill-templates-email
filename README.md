@@ -8,42 +8,10 @@ CSV headers: `customer_email,customer_name,language,genre`. Languages: `en`, `es
 
 **Save to folder** (Chrome/Edge on localhost) asks for a destination and creates a unique batch directory containing `customer_email/template-id.txt`. **Download ZIP** exports the same customer directory structure. Unsafe filename characters are replaced; repeated email addresses receive numbered messages. Existing batches are not overwritten. Empty required variants block export. All processing and file generation happen on your device.
 
-Implementation: the lightweight app lives in `public/textflow.html`, `public/textflow.css`, and `public/textflow.js`. Next.js serves it at `/` using a rewrite, without remote services or additional runtime dependencies. Run `node scripts/check-workflows.cjs` for workflow checks and `npx tsc --noEmit` for TypeScript checks.
+Implementation: Next.js 16 App Router renders the application at `/`. `app/page.tsx` is the server entry point; `components/Textflow.jsx` owns React state, event handlers, browser storage, clipboard access, and file generation. Pure CSV, backup validation, formatting, and ZIP utilities live in `lib/textflow-core.js`. Page sections are split into recipients, templates, preview, export, header, intro, footer, and toast components under `components/`. Styles are imported through the root layout from `app/globals.css`. The legacy `/textflow.html` URL permanently redirects to `/`.
 
-Original scaffold notes follow.
-Templates support `**bold text**` and `[link text](https://example.com)`. The preview renders formatting safely. **Copy for Gmail** writes HTML and plain text to the clipboard; paste normally into a Gmail compose window with Plain text mode turned off. **Export formatted HTML instead of TXT** saves formatted `.html` messages using the existing customer folders, for both folder and ZIP exports. Browser clipboard permission is required; if unavailable, select and copy the rendered preview manually. Gmail paste behavior has not been tested against a signed-in Gmail session.
+Saved templates use the existing `textflow.templates.v1` storage key, so libraries remain available on the same origin. Browser storage loads after hydration; edits write only after an explicit user action, preserving stored data when loading fails. No customer data is sent to a server.
 
-## Getting Started
+Templates support `**bold text**` and `[link text](https://example.com)`. The preview escapes input and renders supported formatting. **Copy for Gmail** writes HTML and plain text to the clipboard. **Export formatted HTML instead of TXT** exports HTML through both folder and ZIP workflows. Browser clipboard support and permission are required; manually copying the preview is the fallback.
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Validation: `npm run lint`, `npx tsc --noEmit`, `npm run build`, and `node scripts/check-workflows.mjs`.
