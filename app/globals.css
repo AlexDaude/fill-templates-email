@@ -165,7 +165,8 @@ th { background:#eaf0fa; color:#364862; }
 .sent-controls { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; font-size:12px; }
 .sent-controls .browse-btn { margin-left:0; }
 .sent-label { color:#166534; font-weight:700; }
-.paper.is-sent { background:#f0fdf4; border-color:#86c99c; }
+.paper.is-sent { background:#bbf7d0; border-color:#22a654; box-shadow:inset 0 0 0 1px #22a654; }
+.paper.is-sent .paper-content { color:#14532d; }
 .recipient.is-sent .recipient-avatar { background:#dcfce7; color:#166534; }
 .recipient.is-sent .recipient-details strong { color:#166534; }
 .sent-row td { background:#f0fdf4; color:#166534; }
