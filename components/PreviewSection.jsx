@@ -1,5 +1,21 @@
 import { formattedMessage } from "@/lib/textflow-core";
 export default function PreviewSection({ person, currentIndex, setCurrentIndex, count, subject, copyField, message, previewRef, copy, sent, toggleSent, children }) {
+  function copyPreviewField(event, label) {
+    event.currentTarget.select();
+    if (person && event.currentTarget.value) {
+      copyField(event.currentTarget.value, label);
+    }
+  }
+
+  function copyMessagePreview(event) {
+    if (!person || event.target.closest("a")) return;
+    const range = document.createRange();
+    range.selectNodeContents(event.currentTarget);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    copy(false);
+  }
 
   return (
       <section className="panel right-panel" aria-labelledby="preview-title">
@@ -20,9 +36,14 @@ export default function PreviewSection({ person, currentIndex, setCurrentIndex, 
           <div className="recipient-details"><strong id="recipientName">{person?.customer_name ?? "No recipient selected"}</strong></div>
           <div className="recipient-meta"><span className="tag" id="recipientLanguage">{person?.language.toUpperCase()}</span><span className="tag" id="recipientGenre">{person?.genre}</span></div>
         </div>
-        <div className="subject-preview"><div><label className="field-label" htmlFor="recipientEmail">Email</label><textarea className="preview-field" id="recipientEmail" rows={1} readOnly value={person?.customer_email ?? ""} placeholder="No recipient selected" /></div><button className="text-btn" type="button" disabled={!person} onClick={() => copyField(person.customer_email, "Email address")}>Copy email</button></div>
-        <div className="subject-preview"><div><label className="field-label" htmlFor="subjectPreview">Subject</label><textarea className="preview-field" id="subjectPreview" rows={2} readOnly value={subject} placeholder={person ? "No subject" : "No recipient selected"} /></div><button className="text-btn" type="button" disabled={!person || !subject} onClick={() => copyField(subject, "Subject")}>Copy subject</button></div>
-        <div className={"paper" + (sent ? " is-sent" : "")}><div className="paper-content" id="messagePreview" ref={previewRef} dangerouslySetInnerHTML={{ __html: person ? formattedMessage(message) : "Upload a CSV with valid customers to preview the personalized message." }}/></div>
+        <div className="subject-preview"><div><label className="field-label" htmlFor="recipientEmail">Email</label><textarea className="preview-field" id="recipientEmail" rows={1} readOnly value={person?.customer_email ?? ""} placeholder="No recipient selected" title="Click to copy email" onClick={event => copyPreviewField(event, "Email address")} /></div><button className="text-btn" type="button" disabled={!person} onClick={() => copyField(person.customer_email, "Email address")}>Copy email</button></div>
+        <div className="subject-preview"><div><label className="field-label" htmlFor="subjectPreview">Subject</label><textarea className="preview-field" id="subjectPreview" rows={2} readOnly value={subject} placeholder={person ? "No subject" : "No recipient selected"} title="Click to copy subject" onClick={event => copyPreviewField(event, "Subject")} /></div><button className="text-btn" type="button" disabled={!person || !subject} onClick={() => copyField(subject, "Subject")}>Copy subject</button></div>
+        <div className={"paper" + (sent ? " is-sent" : "")}><div className="paper-content" id="messagePreview" ref={previewRef} title="Click to copy message text" tabIndex={person ? 0 : -1} onClick={copyMessagePreview} onKeyDown={event => {
+          if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            copyMessagePreview(event);
+          }
+        }} dangerouslySetInnerHTML={{ __html: person ? formattedMessage(message) : "Upload a CSV with valid customers to preview the personalized message." }}/></div>
         <p className="desc">Flags apply to this template and list until you reload or import a CSV.</p>
         <div className="preview-bottom"><span id="previewPosition">{person ? `Recipient ${currentIndex + 1} of ${count}` : "No recipients"}</span><div className="copy-actions"><button className="text-btn" type="button" id="copyMessage" disabled={!person} onClick={() => copy(false)}>Copy text</button><button className="browse-btn" type="button" id="copyGmail" disabled={!person} onClick={() => copy(true)}>Copy for Gmail</button></div></div>
         {children}
