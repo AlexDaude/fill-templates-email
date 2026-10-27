@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 // Load the same dependency-free module Next.js bundles, without changing package type.
 const source = await readFile(new URL('../lib/textflow-core.js', import.meta.url), 'utf8');
-const { parseCsv, validateLibrary, original, labels, formattedMessage, zipFiles, safeSegment, isValid } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const { fillVariables, parseCsv, validateLibrary, original, labels, formattedMessage, zipFiles, safeSegment, isValid } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const rows = parseCsv('\ufeffcustomer_email;customer_name;language;genre\r\na@example.com;"Doe; Ana";ES;singular');
 assert.equal(rows[0].customer_name, 'Doe; Ana');
 assert.equal(rows[0].location, '');
@@ -44,3 +44,16 @@ for (const path of ['sent/', 'no sent/', 'sent/ana@example.com/update.txt', 'no 
 const firstDirectory = groupedZip.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
 assert.equal(groupedZip.readUInt32LE(firstDirectory + 38), 0x10);
 console.log('Passed: sent and no sent ZIP folders, grouped messages, directory attributes.');
+
+const restoredLegacy = validateLibrary(backup);
+assert.equal(restoredLegacy.subjects.update.en.singular, '');
+const withSubject = structuredClone(backup);
+withSubject.templates[0].subjects = { en: { singular: 'Hello {{customer_name}} in {{location}}' } };
+const restoredSubject = validateLibrary(withSubject);
+assert.equal(fillVariables(restoredSubject.subjects.update.en.singular, { customer_name: 'Ana', location: 'Madrid' }), 'Hello Ana in Madrid');
+assert.equal(restoredSubject.subjects.update.es.plural, '');
+const roundTrip = validateLibrary({ version: 1, templates: Object.keys(restoredSubject.templates).map(id => ({ id, name: restoredSubject.labels[id], variants: restoredSubject.templates[id], subjects: restoredSubject.subjects[id] })) });
+assert.deepEqual(roundTrip, restoredSubject);
+withSubject.templates[0].subjects.en.singular = 42;
+assert.throws(() => validateLibrary(withSubject), /subject/);
+console.log('Passed: legacy backups, subject variables, subject backup round trip, invalid subjects.');

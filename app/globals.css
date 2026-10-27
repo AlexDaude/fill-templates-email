@@ -173,3 +173,13 @@ th { background:#eaf0fa; color:#364862; }
 .sent-row .tag { color:#166534; }
 .sent-controls button:disabled { opacity:.45; cursor:not-allowed; }
 .preview-bottom { flex-wrap:wrap; }
+
+.subject-input { width:100%; border:1px solid var(--line-strong); border-radius:8px; padding:12px 14px; background:#fdfcff; color:#25344b; font-size:12px; }
+.subject-preview { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:18px 0; font-size:12px; }
+.subject-preview > div { min-width:0; }
+.subject-preview p { margin:5px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; }
+.subject-preview button { flex-shrink:0; }
+.recipient-details span { user-select:text; }
+.preview-controls { flex-wrap:wrap; justify-content:flex-end; }
+.preview-controls .sent-controls { margin-top:0; flex-wrap:wrap; justify-content:flex-end; }
+@media(max-width:600px) { .right-panel > .panel-header { flex-wrap:wrap; } .preview-controls { width:100%; } }

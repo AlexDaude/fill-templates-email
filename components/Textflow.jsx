@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { DEMO, original, STORAGE_KEY, labels, validateLibrary, isValid, gmailHtml, parseCsv, safeSegment, zipFiles } from "@/lib/textflow-core";
+import { fillVariables, formattedMessage, DEMO, original, STORAGE_KEY, labels, validateLibrary, isValid, gmailHtml, parseCsv, safeSegment, zipFiles } from "@/lib/textflow-core";
 import SiteHeader from "./SiteHeader";
 import PageIntro from "./PageIntro";
 import SiteFooter from "./SiteFooter";
@@ -41,7 +41,7 @@ export default function Textflow() {
         }, 0);
         return () => { clearTimeout(hydrationTimer); clearTimeout(toastTimer.current); };
     }, []);
-    function libraryData(data = library) { return { version: 1, templates: Object.keys(data.templates).map(id => ({ id, name: data.labels[id], variants: data.templates[id] })) }; }
+    function libraryData(data = library) { return { version: 1, templates: Object.keys(data.templates).map(id => ({ id, name: data.labels[id], variants: data.templates[id], subjects: data.subjects?.[id] })) }; }
     function persist(data) {
         setLibrary(data);
         try {
@@ -54,8 +54,17 @@ export default function Textflow() {
         }
     }
     function editVariant(value) { const next = structuredClone(library); next.templates[selectedTemplate][language][genre] = value; persist(next); }
+    function editSubject(value) {
+        const next = structuredClone(library);
+        next.subjects ??= {};
+        next.subjects[selectedTemplate] ??= {};
+        next.subjects[selectedTemplate][language] ??= {};
+        next.subjects[selectedTemplate][language][genre] = value;
+        persist(next);
+    }
     const valid = people.filter(isValid), invalid = people.length - valid.length, person = valid[currentIndex];
-    const interpolate = p => (library.templates[selectedTemplate][p.language][p.genre] || "").replace(/{{\s*(customer_name|customer_email|language|genre|location)\s*}}/g, (_, key) => p[key]);
+    const interpolate = p => fillVariables(library.templates[selectedTemplate][p.language][p.genre] || "", p);
+    const subjectFor = p => fillVariables(library.subjects?.[selectedTemplate]?.[p.language]?.[p.genre] || "", p).replace(/[\r\n]+/g, " ");
     const isSent = p => Boolean(sentMessages[selectedTemplate]?.includes(people.indexOf(p)));
     function toggleSent() {
         if (!person) return;
@@ -90,7 +99,7 @@ export default function Textflow() {
         return; if (Object.keys(library.templates).length >= 100) {
         showToast("Maximum of 100 templates reached.");
         return;
-    } const id = "custom-" + crypto.randomUUID(); persist({ templates: { ...library.templates, [id]: structuredClone(original.update) }, labels: { ...library.labels, [id]: name.trim().slice(0, 100) } }); setSelectedTemplate(id); }
+    } const id = "custom-" + crypto.randomUUID(); persist({ ...library, templates: { ...library.templates, [id]: structuredClone(original.update) }, labels: { ...library.labels, [id]: name.trim().slice(0, 100) } }); setSelectedTemplate(id); }
     async function restore(event) {
         const file = event.target.files[0];
         event.target.value = "";
@@ -110,7 +119,7 @@ export default function Textflow() {
             showToast("Restore failed: " + error.message);
         }
     }
-    function exportFiles() { const used = new Map(); return valid.map(p => { const folder = safeSegment(p.customer_email), key = folder.toLowerCase(), count = (used.get(key) || 0) + 1; used.set(key, count); const text = interpolate(p); return { name: (isSent(p) ? "sent/" : "no sent/") + folder + "/" + selectedTemplate + (count > 1 ? "_" + count : "") + (exportHtml ? ".html" : ".txt"), content: exportHtml ? '<!doctype html><html><head><meta charset="utf-8"><title>Customer message</title></head><body>' + gmailHtml(text) + "</body></html>" : text }; }); }
+    function exportFiles() { const used = new Map(); return valid.map(p => { const folder = safeSegment(p.customer_email), key = folder.toLowerCase(), count = (used.get(key) || 0) + 1; used.set(key, count); const text = interpolate(p), subject = subjectFor(p); return { name: (isSent(p) ? "sent/" : "no sent/") + folder + "/" + selectedTemplate + (count > 1 ? "_" + count : "") + (exportHtml ? ".html" : ".txt"), content: exportHtml ? '<!doctype html><html><head><meta charset="utf-8"><title>Customer message</title></head><body>' + (subject ? "<p><strong>Subject:</strong> " + formattedMessage(subject) + "</p>" : "") + gmailHtml(text) + "</body></html>" : (subject ? "Subject: " + subject + "\n\n" : "") + text }; }); }
     function download(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000); }
     function canExport() { if (!valid.length)
         return false; if (valid.some(p => !interpolate(p).trim())) {
@@ -147,6 +156,14 @@ export default function Textflow() {
                 showToast("Could not save all files: " + error.message);
         }
     }
+    async function copyField(value, label) {
+        try {
+            await navigator.clipboard.writeText(value);
+            showToast(label + " copied to clipboard.");
+        } catch {
+            showToast("Clipboard unavailable. Select and copy the " + label.toLowerCase() + " manually.");
+        }
+    }
     async function copy(formatted) {
         if (!person)
             return;
@@ -174,12 +191,12 @@ export default function Textflow() {
               <TemplatesSection
                 library={library} ready={ready} selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate}
                 language={language} setLanguage={setLanguage} genre={genre} setGenre={setGenre}
-                saveStatus={saveStatus} editVariant={editVariant} newTemplate={newTemplate} restore={restore}
+                saveStatus={saveStatus} editSubject={editSubject} editVariant={editVariant} newTemplate={newTemplate} restore={restore}
                 onBackup={() => download(new Blob([JSON.stringify(libraryData(), null, 2)], { type: "application/json" }), "textflow-templates.json")}
                 onReset={() => editVariant(original[selectedTemplate]?.[language]?.[genre] ?? "Hello {{customer_name}},\n\n")}
               />
             </div>
-            <PreviewSection sent={person ? isSent(person) : false} toggleSent={toggleSent} person={person} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} count={valid.length} message={message} previewRef={preview} copy={copy}>
+            <PreviewSection subject={person ? subjectFor(person) : ""} copyField={copyField} sent={person ? isSent(person) : false} toggleSent={toggleSent} person={person} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} count={valid.length} message={message} previewRef={preview} copy={copy}>
               <ExportSection count={valid.length} invalid={invalid} exportHtml={exportHtml} setExportHtml={setExportHtml} saveToFolder={saveToFolder} downloadZip={downloadZip} />
             </PreviewSection>
           </div>

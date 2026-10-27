@@ -15,3 +15,5 @@ Saved templates use the existing `textflow.templates.v1` storage key, so librari
 Templates support `**bold text**` and `[link text](https://example.com)`. The preview escapes input and renders supported formatting. **Copy for Gmail** writes HTML and plain text to the clipboard. **Export formatted HTML instead of TXT** exports HTML through both folder and ZIP workflows. Browser clipboard support and permission are required; manually copying the preview is the fallback.
 
 Validation: `npm run lint`, `npx tsc --noEmit`, `npm run build`, and `node scripts/check-workflows.mjs`.
+
+Each language/form variant also has an optional subject supporting the same variables as the body. Subjects save with templates and are included in exports when filled in. Older version 1 backups restore with blank subjects; new backups preserve subjects alongside the original text variants. The preview offers separate Copy email and Copy subject buttons, with Mark as sent beside the recipient arrows.
