@@ -183,3 +183,8 @@ th { background:#eaf0fa; color:#364862; }
 .preview-controls { flex-wrap:wrap; justify-content:flex-end; }
 .preview-controls .sent-controls { margin-top:0; flex-wrap:wrap; justify-content:flex-end; }
 @media(max-width:600px) { .right-panel > .panel-header { flex-wrap:wrap; } .preview-controls { width:100%; } }
+
+.subject-preview > div { flex:1; }
+.subject-preview .field-label { margin-top:0; }
+textarea.preview-field, textarea.subject-input { min-height:0; line-height:1.6; }
+textarea.preview-field { user-select:text; }

@@ -16,7 +16,7 @@ export default function TemplatesSection({ library, ready, selectedTemplate, set
             <select id="genreSelect" value={genre} onChange={e => setGenre(e.target.value)} className="select" aria-label="Singular or plural form"><option value="singular">Singular</option><option value="plural">Plural</option></select>
           </div>
           <label className="field-label" htmlFor="subjectEditor">Subject <span>Supports the same variables as the message</span></label>
-          <input className="subject-input" id="subjectEditor" type="text" value={library.subjects?.[selectedTemplate]?.[language]?.[genre] ?? ""} onChange={e => editSubject(e.target.value)} disabled={!ready} placeholder="An update for {{customer_name}}" />
+          <textarea className="subject-input" id="subjectEditor" rows={2} value={library.subjects?.[selectedTemplate]?.[language]?.[genre] ?? ""} onChange={e => editSubject(e.target.value)} disabled={!ready} placeholder="An update for {{customer_name}}" />
           <div className="field-label">Message text <span><span id="saveStatus" role="status">{saveStatus}</span></span></div>
           <textarea id="templateEditor" value={library.templates[selectedTemplate][language][genre]} onChange={e => editVariant(e.target.value)} disabled={!ready} spellCheck="true" aria-label="Template message text"></textarea>
           <p className="format-help">Formatting: <code>**bold text**</code> · <code>[link text](https://example.com)</code></p>
